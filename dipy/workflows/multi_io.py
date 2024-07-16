@@ -2,6 +2,7 @@ import inspect
 import itertools
 import numpy as np
 import os
+import copy
 from glob import glob
 
 from dipy.workflows.base import get_args_default
@@ -162,9 +163,9 @@ def io_iterator_(frame, fnc, output_strategy='absolute', mix_names=False):
         Contains the info about the current local variables values.
     fnc : function
         The function to inspect
-    output_strategy : string
+    output_strategy : string, optional
         Controls the behavior of the IOIterator for output paths.
-    mix_names : bool
+    mix_names : bool, optional
         Whether or not to append a mix of input names at the beginning.
 
     Returns
@@ -172,9 +173,19 @@ def io_iterator_(frame, fnc, output_strategy='absolute', mix_names=False):
         Properly instantiated IOIterator object.
 
     """
+    # Remove the ``self`` key from the locals dictionary of the frame
+    def _remove_self_from_dict(_values):
+        if "self" in _values:
+            del _values["self"]
+        return _values
+
     args, _, _, values = inspect.getargvalues(frame)
     args.remove('self')
-    del values['self']
+
+    # Remove the ``self`` dict item from the provided copy of the local symbol
+    # table returned by ``getargvalues``. Avoid attempting to remove it from the
+    # object returned by ``getargvalues``.
+    values = _remove_self_from_dict(copy.deepcopy(values))
 
     spargs, defaults = get_args_default(fnc)
 
